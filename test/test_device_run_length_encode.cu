@@ -32,7 +32,7 @@
 
 // Ensure printing of CUDA runtime errors to console
 #define CUB_STDERR
-
+#define COMPARISON_WITH_MODERNGPU_REDUCE
 #include <stdio.h>
 #include <typeinfo>
 
@@ -361,6 +361,9 @@ cudaError_t Dispatch(
 /**
  * Initialize problem
  */
+ // this function is responsible for generating the data that we need
+ // the h_in array and here we can understand how to iterate the number of unique segments?
+ // infact the number of unique segments (number of runs) will determine the average run length
 template <typename T>
 void Initialize(
     int         entropy_reduction,
@@ -375,25 +378,33 @@ void Initialize(
     while (i < num_items)
     {
         // Select number of repeating occurrences for the current run
+        // current run is i
+        // repeat will store the number of times i is repeated
         int repeat;
+        // max segment length < 0 would mean that we have just 1 item?
         if (max_segment < 0)
         {
             repeat = num_items;
         }
+        // otherwise if max_segment is 1
+        // then it means that we are only allowed one unique entry for each element (run)
         else if (max_segment < 2)
         {
             repeat = 1;
         }
         else
-        {
+        {   // randombits/max_int is a random number between 0 and 1?
+            // that's what would make sense -- yes
+            // this is where we vary the repeat
+            // it is a function of entropy_reduction and max_segment
             RandomBits(repeat, entropy_reduction);
             repeat = (int) ((double(repeat) * double(max_segment)) / double(max_int));
             repeat = CUB_MAX(1, repeat);
         }
-
+        
         int j = i;
         while (j < CUB_MIN(i + repeat, num_items))
-        {
+        {   
             InitValue(INTEGER_SEED, h_in[j], key);
             j++;
         }
@@ -624,7 +635,10 @@ void TestPointer(
     Initialize(entropy_reduction, h_in, num_items, max_segment);
 
     int num_runs = Solve<RLE_METHOD>(h_in, h_unique_reference, h_offsets_reference, h_lengths_reference, equality_op, num_items);
-
+    // num runs contains the number of segments so we need to vary this multiple times?
+    // so Solve calculates num_runs from the input array 
+    // therefore the generation needs to be monitored from where h_in is generated
+    // printf("the number of runs is %d", num_runs);
     printf("\nPointer %s cub::%s on %d items, %d segments (avg run length %.3f), {%s key, %s offset, %s length}, max_segment %d, entropy_reduction %d\n",
         (RLE_METHOD == RLE) ? "DeviceReduce::RunLengthEncode" : (RLE_METHOD == NON_TRIVIAL) ? "DeviceRunLengthEncode::NonTrivialRuns" : "Other",
         (BACKEND == CDP) ? "CDP CUB" : (BACKEND == THRUST) ? "Thrust" : "CUB",
@@ -793,7 +807,8 @@ void TestSize(
 
 }
 
-
+// Technically I should run non trivial runs otherwise it will not be a fair comparison
+// CUB will require 2X memory if all the elements are unique as it will have to save a count (an interger = 1) for each 
 //---------------------------------------------------------------------
 // Main
 //---------------------------------------------------------------------
@@ -857,6 +872,15 @@ int main(int argc, char** argv)
 
     TestPointer<RLE,            CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
     TestPointer<RLE,            THRUST, int, int, int>(    num_items, entropy_reduction, max_segment);
+
+#elif defined(COMPARISON_WITH_MODERNGPU_REDUCE)
+
+    // assert(num_items > 0)
+    TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
+    TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
+    TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
+    TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
+    TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
 
 #else
 

@@ -428,6 +428,7 @@ void RandomBits(
 {
     const int NUM_BYTES = sizeof(K);
     const int WORD_BYTES = sizeof(unsigned int);
+    // to round up
     const int NUM_WORDS = (NUM_BYTES + WORD_BYTES - 1) / WORD_BYTES;
 
     unsigned int word_buff[NUM_WORDS];
