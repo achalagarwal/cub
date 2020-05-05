@@ -876,6 +876,7 @@ int main(int argc, char** argv)
 #elif defined(COMPARISON_WITH_MODERNGPU_REDUCE)
 
     // assert(num_items > 0)
+    Test       <NON_TRIVIAL,    CUB, int, int, int>(    num_items);
     TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
     TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
     TestPointer<NON_TRIVIAL,    CUB, int, int, int>(    num_items, entropy_reduction, max_segment);
